@@ -11,12 +11,13 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 [image1]: ./output_images/car_not_car.png
-[image2]: ./examples/HOG_example.jpg
+[image2]: ./output_images/HOG_YCrCb.jpg
 [image3]: ./examples/sliding_windows.jpg
 [image4]: ./examples/sliding_window.jpg
 [image5]: ./examples/bboxes_and_heat.png
 [image6]: ./examples/labels_map.png
 [image7]: ./examples/output_bboxes.png
+[image8]: ./output_images/HOG_RGB.jpg
 [video1]: ./project_video.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
@@ -33,7 +34,7 @@ You're reading it!
 
 #### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
-The code for this step is contained in lines #3 through #7 of the file called `feature.py`.
+The code for this step is contained in lines #44 through #152 of the file called `feature.py`.
 
 I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
@@ -41,14 +42,24 @@ I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an 
 
 I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
-Here is an example using the `YCrCb` color space and HOG parameters of `orientations=8`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+Here is an example using the `RGB` color space and HOG parameters of `orientations=9`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+![alt text][image8]
 
+In RGB color space, we see almost no changes in HOG among the channels. However, the changes are more evident in `YCrCb` color space:
 
 ![alt text][image2]
 
 #### 2. Explain how you settled on your final choice of HOG parameters.
 
-I tried various combinations of parameters and...
+I tried various combinations of parameters and mainly tried to detect cars properly in the video pipeline. The final parameters are the following:
+
+|Parameter|Value|
+|:--------|----:|
+|Color Space|YCrCb|
+|HOG Orient|9|
+|HOG Pixels per cell|8|
+|HOG Cell per block|2|
+|HOG Channels|All|
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 

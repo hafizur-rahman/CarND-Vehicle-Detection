@@ -1,43 +1,45 @@
-# Define a function that takes an image,
-# start and stop positions in both x and y, 
-# window size (x and y dimensions),  
-# and overlap fraction (for both x and y)
-def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], 
-                    xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
-    # If x and/or y start/stop positions not defined, set to image size
-    if x_start_stop[0] == None:
-        x_start_stop[0] = 0
-    if x_start_stop[1] == None:
-        x_start_stop[1] = img.shape[1]
-    if y_start_stop[0] == None:
-        y_start_stop[0] = 0
-    if y_start_stop[1] == None:
-        y_start_stop[1] = img.shape[0]
-    # Compute the span of the region to be searched    
-    xspan = x_start_stop[1] - x_start_stop[0]
-    yspan = y_start_stop[1] - y_start_stop[0]
-    # Compute the number of pixels per step in x/y
-    nx_pix_per_step = np.int(xy_window[0]*(1 - xy_overlap[0]))
-    ny_pix_per_step = np.int(xy_window[1]*(1 - xy_overlap[1]))
-    # Compute the number of windows in x/y
-    nx_buffer = np.int(xy_window[0]*(xy_overlap[0]))
-    ny_buffer = np.int(xy_window[1]*(xy_overlap[1]))
-    nx_windows = np.int((xspan-nx_buffer)/nx_pix_per_step) 
-    ny_windows = np.int((yspan-ny_buffer)/ny_pix_per_step) 
-    # Initialize a list to append window positions to
-    window_list = []
-    # Loop through finding x and y window positions
-    # Note: you could vectorize this step, but in practice
-    # you'll be considering windows one by one with your
-    # classifier, so looping makes sense
-    for ys in range(ny_windows):
-        for xs in range(nx_windows):
-            # Calculate window position
-            startx = xs*nx_pix_per_step + x_start_stop[0]
-            endx = startx + xy_window[0]
-            starty = ys*ny_pix_per_step + y_start_stop[0]
-            endy = starty + xy_window[1]
-            # Append window position to list
-            window_list.append(((startx, starty), (endx, endy)))
-    # Return the list of windows
-    return window_list
+from sklearn.model_selection import train_test_split
+from sklearn.svm import LinearSVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.utils import shuffle
+
+from feature import *
+
+def prepare_dataset(cars, notcars, params, ratio=0.2):
+    car_features = extract_features(cars, params)
+    notcar_features = extract_features(notcars, params)
+
+    # Create an array stack of feature vectors
+    X = np.vstack((car_features, notcar_features)).astype(np.float64)
+
+    # Define the labels vector
+    y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
+
+    # Split up data into randomized training and test sets
+    rand_state = np.random.randint(0, 100)
+
+    X, y = shuffle(X, y, random_state=rand_state)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=ratio, random_state=rand_state)
+    
+    return X_train, X_test, y_train, y_test
+
+
+def normalize(X_train, X_test):
+    # Fit a per-column scaler
+    X_scaler = StandardScaler().fit(X_train)
+
+    # Apply the scaler to X
+    X_train = X_scaler.transform(X_train)
+    X_test = X_scaler.transform(X_test)
+
+    return X_scaler, X_train, X_test
+
+
+def train_svc_model(X_train, y_train):
+    # Use a linear SVC 
+    svc = LinearSVC()
+    svc.fit(X_train, y_train)
+
+    return svc

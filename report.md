@@ -63,13 +63,20 @@ I tried various combinations of parameters and mainly tried to detect cars prope
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-I trained a linear SVM using...
+I trained a linear SVM (`sklearn.svm.LinearSVC`) using both HOG features and color features (Line #1 to #45 at `training.py`).
+
+For a particular run, SVM training log looks like:
+```
+Feature vector length: 8460
+7.72 Seconds to train SVC...
+Test Accuracy of SVC =  0.9885
+```
 
 ### Sliding Window Search
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+I decided to search in right half portion of the image in different scales `[ 1.0, 1.5, 2.0, 3.0 ]` using Hog Sub-sampling Window Search technique. The overlap was 25 %.
 
 ![alt text][image3]
 

@@ -1,10 +1,12 @@
 from scipy.ndimage.measurements import label
 from skimage.filters import gaussian
+from joblib import Parallel,delayed
+
 from feature import *
 
 # Define a single function that can extract features using hog sub-sampling and make predictions
 def find_cars(img, xstart, ystart, ystop, scale, svc, X_scaler, params):
-    img_tosearch = img[ystart:ystop, xstart:,:]
+    img_tosearch = img[ystart:ystop, xstart:, :]
         
     # apply color conversion if other than 'RGB'
     ctrans_tosearch = convert_color_space(img_tosearch, params.color_space)
@@ -80,16 +82,17 @@ def find_cars(img, xstart, ystart, ystop, scale, svc, X_scaler, params):
             test_features = X_scaler.transform(np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))    
 
             test_prediction = svc.predict(test_features)
-            
-            if test_prediction == 1:
+            confidence = svc.decision_function(test_features)
+
+            if test_prediction == 1 and confidence > 0.7:
                 xbox_left = np.int(xleft*scale)
                 ytop_draw = np.int(ytop*scale)
-                win_draw = np.int(window*scale)
+                win_draw = np.int(window*scale)                
                 
-                bbox_left_top = (xstart + xbox_left, ytop_draw+ystart)
-                bbox_right_bottom = (xstart + xbox_left+win_draw,ytop_draw+win_draw+ystart)
-                
-                bbox_list.append((bbox_left_top, bbox_right_bottom))
+                bbox_list.append((
+                    (xstart + xbox_left, ytop_draw+ystart),
+                    (xstart + xbox_left+win_draw,ytop_draw+win_draw+ystart)
+                ))
     return bbox_list
 
 def add_heat(heatmap, bbox_list):
@@ -123,11 +126,22 @@ def draw_labeled_bboxes(img, labels):
         
         # Define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-        
-        # Draw the box on the image
-        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+        w = bbox[1][0] - bbox[0][0]
+        h = bbox[1][1] - bbox[0][1]
+        area = w * h
+
+        draw = False
+        if bbox[0][1] >= 550 and area > 8000:
+            draw = True
+        elif bbox[0][1] >= 550 and area > 4000:
+            draw = True
+
+        if draw == True:
+            # Draw the box on the image
+            cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
     # Return the image
     return img
+
 
 class CarDetector:
     def __init__(self, params, svc, X_scaler):
@@ -137,7 +151,7 @@ class CarDetector:
 
     def detect_cars(self, image):
         new_img = np.copy(image)
-        bbox_list = []
+        bbox_list = []        
         
         multi_window_setting = [
             (400, 1.0),
@@ -146,22 +160,20 @@ class CarDetector:
             (420, 1.5),
             (400, 2.0),
             (432, 2.0)
-        ]
-        
-        for ystart, scale in multi_window_setting:
-            ystop = ystart + int(64 * scale)        
-            
-            bbox_list.extend(find_cars(image, 500, ystart, ystop, scale, self.svc, self.X_scaler, self.params))
+        ]       
+
+        # Search all scales in parallel
+        tmp = Parallel(n_jobs=len(multi_window_setting))(delayed(find_cars)(image, 500, ystart, ystart+int(64 * scale), scale, self.svc, self.X_scaler, self.params) for ystart, scale in multi_window_setting)
+
+        [bbox_list.extend(bboxes) for bboxes in tmp]        
         
         heat = np.zeros_like(image[:,:,0]).astype(np.float)
         heat = add_heat(heat, bbox_list)
-            
-        heat = gaussian(heat, 3)
-        
         heat = apply_threshold(heat, len(multi_window_setting)//2 + 1)
 
         # Find final boxes from heatmap using label function
         labels = label(heat)
+                    
         new_img = draw_labeled_bboxes(new_img, labels)
         
         return new_img

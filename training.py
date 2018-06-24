@@ -39,7 +39,7 @@ def normalize(X_train, X_test):
 
 def train_svc_model(X_train, y_train):
     # Use a linear SVC 
-    svc = LinearSVC()
+    svc = LinearSVC(C=0.001)
     svc.fit(X_train, y_train)
 
     return svc

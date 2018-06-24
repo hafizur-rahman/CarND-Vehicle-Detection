@@ -129,33 +129,39 @@ def draw_labeled_bboxes(img, labels):
     # Return the image
     return img
 
-def detect_cars(image):
-    new_img = np.copy(image)
-    bbox_list = []
-    
-    multi_window_setting = [
-        (400, 1.0),
-        (408, 1.0),
-        (400, 1.5),
-        (420, 1.5),
-        (400, 2.0),
-        (432, 2.0)
-    ]
-    
-    for ystart, scale in multi_window_setting:
-        ystop = ystart + int(64 * scale)        
-        
-        bbox_list.extend(find_cars(image, 500, ystart, ystop, scale, svc, X_scaler, params))
-    
-    heat = np.zeros_like(image[:,:,0]).astype(np.float)
-    heat = add_heat(heat, bbox_list)
-        
-    heat = gaussian(heat, 3)
-    
-    heat = apply_threshold(heat, len(multi_window_setting)//2 + 1)
+class CarDetector:
+    def __init__(self, params, svc, X_scaler):
+        self.params = params
+        self.svc = svc
+        self.X_scaler = X_scaler
 
-    # Find final boxes from heatmap using label function
-    labels = label(heat)
-    new_img = draw_labeled_bboxes(new_img, labels)
-    
-    return new_img
+    def detect_cars(self, image):
+        new_img = np.copy(image)
+        bbox_list = []
+        
+        multi_window_setting = [
+            (400, 1.0),
+            (408, 1.0),
+            (400, 1.5),
+            (420, 1.5),
+            (400, 2.0),
+            (432, 2.0)
+        ]
+        
+        for ystart, scale in multi_window_setting:
+            ystop = ystart + int(64 * scale)        
+            
+            bbox_list.extend(find_cars(image, 500, ystart, ystop, scale, self.svc, self.X_scaler, self.params))
+        
+        heat = np.zeros_like(image[:,:,0]).astype(np.float)
+        heat = add_heat(heat, bbox_list)
+            
+        heat = gaussian(heat, 3)
+        
+        heat = apply_threshold(heat, len(multi_window_setting)//2 + 1)
+
+        # Find final boxes from heatmap using label function
+        labels = label(heat)
+        new_img = draw_labeled_bboxes(new_img, labels)
+        
+        return new_img

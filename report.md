@@ -13,12 +13,12 @@ The goals / steps of this project are the following:
 [image1]: ./output_images/car_not_car.png
 [image2]: ./output_images/HOG_YCrCb.jpg
 [image3]: ./examples/sliding_windows.jpg
-[image4]: ./examples/sliding_window.jpg
-[image5]: ./examples/bboxes_and_heat.png
+[image4]: ./output_images/pipeline.jpg
+[image5]: ./output_images/detection.jpg
 [image6]: ./examples/labels_map.png
 [image7]: ./examples/output_bboxes.png
 [image8]: ./output_images/HOG_RGB.jpg
-[video1]: ./project_video.mp4
+[video1]: ./project_video_result.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
@@ -63,7 +63,9 @@ I tried various combinations of parameters and mainly tried to detect cars prope
 
 #### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-I trained a linear SVM (`sklearn.svm.LinearSVC`) using both HOG features and color features (Line #1 to #45 at `training.py`).
+I trained a linear SVM (`sklearn.svm.LinearSVC`) using both HOG features and color features (Line #1 to #45 at `training.py`). All the features are normalized (function defined at line 29 to 37 in `training.py` and called from the notebook). This is very important critical step. Otherwise, classifier may have some bias toward to the features with higher weights.
+
+Randomly selected 20% of images are used for testing (lines 23-24 in `training.py`).
 
 For a particular run, SVM training log looks like:
 ```
@@ -76,13 +78,12 @@ Test Accuracy of SVC =  0.9885
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search in right half portion of the image in different scales `[ 1.0, 1.5, 2.0, 3.0 ]` using Hog Sub-sampling Window Search technique. The overlap was 25 %.
+I decided to search in right half portion of the image in different scales `[ 1.0, 1.5, 2.0 ]` using Hog Sub-sampling Window Search technique. The overlap was 75%. The decision was made on a trial and error basis based on the observed performance in detection accuracy. (Code resides at lines 8 to 95 in `detection.py`)
 
-![alt text][image3]
 
 #### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+Ultimately I searched on three scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which gave more than 98% accuracy on randomly sampled test data. So no further optimization was tried. Here are some example images:
 
 ![alt text][image4]
 ---
@@ -95,21 +96,12 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected
+(code is available at `detection.py`).
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
 
-### Here are six frames and their corresponding heatmaps:
-
+### Here are six frames and their corresponding heatmaps and resulting bounding boxes:
 ![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
-
-
 
 ---
 
@@ -117,5 +109,11 @@ Here's an example result showing the heatmap from a series of frames of video, t
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The main problem I faced is eliminating the false positives. I struggled for days and was partially successful.
+
+Also to avoid false positives, image scan starts only from (500, 400) upto right bottom corner of the image. So the detection will not generalize.
+
+Better algorithm like YOLO (You Only Look Once) should be robust to improve this situation.
+
+
 
